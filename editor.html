@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Limited – Quiz Editor</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 62px);
+    }
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 14px;
+      overflow-y: auto;
+      position: sticky;
+      top: 62px;
+      height: calc(100vh - 62px);
+    }
+    .sidebar h2 { font-size:1rem; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+    .q-list { display:flex; flex-direction:column; gap:8px; flex:1; overflow-y:auto; }
+    .q-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius:10px;
+      padding:10px 12px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      transition: border-color .15s, background .15s;
+      font-size:.88rem;
+      font-weight:700;
+    }
+    .q-item:hover { border-color:var(--accent); }
+    .q-item.active { border-color:var(--accent); background:rgba(109,40,217,.15); }
+    .q-item .q-num { background:var(--border); color:var(--muted); width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:.75rem; flex-shrink:0; }
+    .q-item .q-text { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+    .q-item .q-del { color:var(--muted); font-size:.85rem; padding:2px 5px; border-radius:5px; flex-shrink:0; }
+    .q-item .q-del:hover { color:var(--red); background:rgba(239,68,68,.15); }
+
+    /* MAIN */
+    .editor-main { padding:30px; overflow-y:auto; }
+    .meta-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+    .q-editor {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:28px;
+      margin-top:24px;
+    }
+    .q-editor-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+    .q-editor h3 { font-size:1.1rem; font-weight:900; }
+
+    .answers-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+    .answer-row {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background:var(--surface2);
+      border:2px solid var(--border);
+      border-radius:10px;
+      padding:8px 12px;
+      transition:border-color .15s;
+    }
+    .answer-row.is-correct { border-color:var(--green); background:rgba(34,197,94,.08); }
+    .answer-row input { background:transparent; border:none; padding:4px 0; font-size:.93rem; }
+    .answer-row input:focus { border:none; }
+    .correct-radio {
+      width:20px; height:20px; border-radius:50%;
+      border:2px solid var(--border);
+      cursor:pointer;
+      flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      transition:border-color .15s, background .15s;
+    }
+    .correct-radio.checked { border-color:var(--green); background:var(--green); }
+    .correct-radio.checked::after { content:'✓'; color:#fff; font-size:.7rem; font-weight:900; }
+    .ans-color { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+    .empty-editor { text-align:center; padding:80px 20px; color:var(--muted); }
+    .empty-editor .big { font-size:3rem; margin-bottom:12px; }
+
+    /* EMOJI PICKER */
+    .emoji-grid { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .emoji-opt { font-size:1.5rem; cursor:pointer; padding:4px; border-radius:6px; transition:background .1s; }
+    .emoji-opt:hover, .emoji-opt.sel { background:var(--surface2); }
+
+    @media(max-width:700px){
+      .editor-layout { grid-template-columns:1fr; }
+      .sidebar { position:static; height:auto; max-height:300px; }
+      .meta-row { grid-template-columns:1fr; }
+      .answers-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">⚡ Limited</div>
+  <div class="topbar-right">
+    <a href="index.html" class="btn btn-secondary btn-sm">← Home</a>
+    <button class="btn btn-primary" id="saveBtn" onclick="saveAndExit()">💾 Save & Exit</button>
+  </div>
+</div>
+
+<div class="editor-layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div>
+      <h2>Questions</h2>
+    </div>
+    <div class="q-list" id="qList"></div>
+    <button class="btn btn-primary w-full" onclick="addQuestion()">➕ Add Question</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="editor-main">
+    <!-- Quiz Meta -->
+    <div>
+      <h2 style="font-size:1.3rem;font-weight:900;margin-bottom:16px">📋 Quiz Details</h2>
+      <div class="meta-row">
+        <div>
+          <label>Quiz Title</label>
+          <input type="text" id="quizTitle" placeholder="e.g. Science Quiz" maxlength="60"/>
+        </div>
+        <div>
+          <label>Description (optional)</label>
+          <input type="text" id="quizDesc" placeholder="Short description..." maxlength="100"/>
+        </div>
+      </div>
+      <div class="mt-3">
+        <label>Emoji Icon</label>
+        <div class="flex items-center gap-3 mt-1">
+          <span id="selectedEmoji" style="font-size:2rem;cursor:pointer" onclick="toggleEmojiPicker()">📚</span>
+          <span class="text-muted">Click to change</span>
+        </div>
+        <div class="emoji-grid hidden" id="emojiPicker"></div>
+      </div>
+    </div>
+
+    <!-- Question Editor -->
+    <div id="qEditor">
+      <div class="empty-editor">
+        <div class="big">📝</div>
+        <p>Add your first question using the button on the left!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  const EMOJIS = ['📚','🎮','🌍','🔢','🧪','🎵','🏆','⚽','🧠','💡','🚀','🌟','🔥','💎','🎯','🦁','🐉','🌈','🍕','🎲'];
+
+  const params = new URLSearchParams(location.search);
+  let quiz = params.get('id') ? (getQuiz(params.get('id')) || newQuiz()) : newQuiz();
+  let activeQIdx = quiz.questions.length ? 0 : -1;
+
+  // EMOJI PICKER
+  const picker = $('emojiPicker');
+  EMOJIS.forEach(e => {
+    const s = document.createElement('span');
+    s.className = 'emoji-opt' + (e === quiz.emoji ? ' sel' : '');
+    s.textContent = e;
+    s.onclick = () => {
+      quiz.emoji = e;
+      $('selectedEmoji').textContent = e;
+      picker.querySelectorAll('.emoji-opt').forEach(x => x.classList.remove('sel'));
+      s.classList.add('sel');
+      picker.classList.add('hidden');
+    };
+    picker.appendChild(s);
+  });
+  function toggleEmojiPicker() { picker.classList.toggle('hidden'); }
+  $('selectedEmoji').textContent = quiz.emoji || '📚';
+
+  // META
+  $('quizTitle').value = quiz.title || '';
+  $('quizDesc').value  = quiz.description || '';
+
+  $('quizTitle').addEventListener('input', () => { quiz.title = $('quizTitle').value; });
+  $('quizDesc').addEventListener('input',  () => { quiz.description = $('quizDesc').value; });
+
+  // RENDER SIDEBAR
+  function renderSidebar() {
+    const list = $('qList');
+    list.innerHTML = '';
+    quiz.questions.forEach((q, i) => {
+      const d = document.createElement('div');
+      d.className = 'q-item' + (i === activeQIdx ? ' active' : '');
+      d.innerHTML = `
+        <div class="q-num">${i+1}</div>
+        <div class="q-text">${q.question || 'Empty question'}</div>
+        <span class="q-del" title="Delete" onclick="removeQuestion(${i},event)">✕</span>
+      `;
+      d.onclick = (e) => { if(!e.target.classList.contains('q-del')){ activeQIdx=i; render(); } };
+      list.appendChild(d);
+    });
+  }
+
+  // RENDER QUESTION EDITOR
+  const ANS_COLORS = ['#ef4444','#3b82f6','#f59e0b','#22c55e'];
+  const ANS_LABELS = ['A','B','C','D'];
+
+  function renderQEditor() {
+    const main = $('qEditor');
+    if (activeQIdx < 0 || !quiz.questions[activeQIdx]) {
+      main.innerHTML = `<div class="empty-editor"><div class="big">📝</div><p>Add a question to get started!</p></div>`;
+      return;
+    }
+    const q = quiz.questions[activeQIdx];
+    main.innerHTML = `
+      <div class="q-editor">
+        <div class="q-editor-header">
+          <h3>Question ${activeQIdx+1} of ${quiz.questions.length}</h3>
+          <div class="flex gap-2 items-center">
+            <label style="margin:0;white-space:nowrap">⏱ Time:</label>
+            <select id="timeLimit" style="width:100px">
+              <option value="10">10s</option>
+              <option value="15">15s</option>
+              <option value="20">20s</option>
+              <option value="30">30s</option>
+              <option value="45">45s</option>
+              <option value="60">60s</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Question</label>
+        <textarea id="qText" placeholder="Type your question here..." rows="3">${q.question}</textarea>
+
+        <div style="margin-top:20px">
+          <label>Answer Options <span style="font-weight:600;font-size:.75rem;color:var(--muted)">(click the circle to mark correct answer)</span></label>
+          <div class="answers-grid" id="answersGrid"></div>
+        </div>
+      </div>
+    `;
+
+    // time limit
+    const tl = $('timeLimit');
+    tl.value = q.timeLimit || 20;
+    tl.onchange = () => { q.timeLimit = parseInt(tl.value); };
+
+    // question text
+    $('qText').oninput = () => {
+      q.question = $('qText').value;
+      renderSidebar();
+    };
+
+    // answers
+    renderAnswers(q);
+  }
+
+  function renderAnswers(q) {
+    const grid = $('answersGrid');
+    grid.innerHTML = '';
+    q.answers.forEach((ans, i) => {
+      const row = document.createElement('div');
+      row.className = 'answer-row' + (i === q.correct ? ' is-correct' : '');
+      row.innerHTML = `
+        <div class="correct-radio${i===q.correct?' checked':''}" id="radio_${i}" onclick="setCorrect(${i})"></div>
+        <div class="ans-color" style="background:${ANS_COLORS[i]}"></div>
+        <input type="text" placeholder="Answer ${ANS_LABELS[i]}..." value="${ans}" id="ans_${i}"/>
+      `;
+      grid.appendChild(row);
+      row.querySelector(`#ans_${i}`).oninput = (e) => { q.answers[i] = e.target.value; };
+    });
+  }
+
+  function setCorrect(i) {
+    quiz.questions[activeQIdx].correct = i;
+    renderAnswers(quiz.questions[activeQIdx]);
+    // update row highlighting
+    document.querySelectorAll('.answer-row').forEach((r,j) => {
+      r.classList.toggle('is-correct', j===i);
+    });
+  }
+
+  function render() { renderSidebar(); renderQEditor(); }
+
+  function addQuestion() {
+    const q = newQuestion();
+    quiz.questions.push(q);
+    activeQIdx = quiz.questions.length - 1;
+    render();
+    // scroll sidebar to bottom
+    setTimeout(() => { const l=$('qList'); l.scrollTop=l.scrollHeight; }, 50);
+  }
+
+  function removeQuestion(i, e) {
+    e.stopPropagation();
+    quiz.questions.splice(i, 1);
+    if (activeQIdx >= quiz.questions.length) activeQIdx = quiz.questions.length - 1;
+    render();
+  }
+
+  function saveAndExit() {
+    quiz.title = $('quizTitle').value.trim() || 'Untitled Quiz';
+    quiz.description = $('quizDesc').value.trim();
+    if (!quiz.questions.length) { alert('Add at least one question!'); return; }
+    // validate
+    for (let i=0; i<quiz.questions.length; i++) {
+      const q = quiz.questions[i];
+      if (!q.question.trim()) { activeQIdx=i; render(); alert(`Question ${i+1} has no text!`); return; }
+      if (q.answers.some(a => !a.trim())) { activeQIdx=i; render(); alert(`Question ${i+1} has empty answers!`); return; }
+    }
+    saveQuiz(quiz);
+    window.location.href = 'index.html';
+  }
+
+  render();
+</script>
+</body>
+</html>

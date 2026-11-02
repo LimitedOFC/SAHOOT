@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Limited – Host</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { background:var(--bg); }
+
+    /* ── LOBBY ── */
+    .lobby-wrap {
+      min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:50px 24px; text-align:center;
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(124,58,237,.2) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 70%, rgba(6,182,212,.15) 0%, transparent 55%);
+    }
+
+    .quiz-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      background:var(--surface); border:1px solid var(--border2);
+      border-radius:50px; padding:8px 18px;
+      font-size:.82rem; font-weight:600; color:var(--text2);
+      margin-bottom:20px;
+    }
+
+    .pin-card {
+      background:#fff;
+      border-radius:20px;
+      padding:24px 56px;
+      margin:20px 0;
+      box-shadow:0 0 0 1px rgba(124,58,237,.4), 0 0 80px rgba(124,58,237,.35);
+      animation:glow 3s infinite;
+    }
+    .pin-label { font-size:.75rem; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#555; margin-bottom:4px; }
+    .pin-num   { font-family:'Space Grotesk',sans-serif; font-size:5rem; font-weight:800; letter-spacing:10px; color:#07071a; line-height:1; }
+
+    .join-url-row { display:flex; align-items:center; gap:8px; max-width:520px; margin:0 auto; }
+    .join-url-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; font-size:.82rem; color:var(--text3); flex:1; word-break:break-all; text-align:left; }
+
+    /* OPTIONS */
+    .lobby-options { display:flex; flex-direction:column; gap:8px; max-width:400px; margin:20px auto 0; }
+
+    /* PLAYERS */
+    .players-wrap { max-width:720px; margin:20px auto; }
+    .players-grid {
+      display:flex; flex-wrap:wrap; gap:8px;
+      justify-content:center; min-height:52px;
+      padding:4px;
+    }
+    .player-chip {
+      background:var(--surface2);
+      border:1px solid var(--border2);
+      border-radius:50px;
+      padding:7px 10px 7px 14px;
+      font-weight:600;
+      font-size:.88rem;
+      animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+      display:flex; align-items:center; gap:8px;
+    }
+    .kick-btn {
+      background:rgba(255,255,255,.08);
+      border:none; color:var(--text3);
+      border-radius:50%; width:22px; height:22px;
+      cursor:pointer; font-size:.7rem;
+      display:flex; align-items:center; justify-content:center;
+      transition:background .15s, color .15s;
+    }
+    .kick-btn:hover { background:rgba(239,68,68,.3); color:var(--red2); }
+
+    .waiting-dots {
+      color:var(--text3); font-size:.88rem;
+      display:flex; align-items:center; gap:4px; justify-content:center;
+    }
+    .dot { width:6px; height:6px; border-radius:50%; background:var(--text3); animation:dotPulse 1.4s infinite; }
+    .dot:nth-child(2){ animation-delay:.2s; }
+    .dot:nth-child(3){ animation-delay:.4s; }
+    @keyframes dotPulse { 0%,80%,100%{transform:scale(0);opacity:.3} 40%{transform:scale(1);opacity:1} }
+
+    /* ── QUESTION SCREEN ── */
+    .q-screen {
+      min-height:100vh; display:flex; flex-direction:column;
+      background:var(--bg);
+    }
+    .q-top-bar {
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:14px 28px;
+      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    }
+    .q-progress-wrap { flex:1; max-width:300px; }
+    .q-prog-label { font-size:.72rem; color:var(--text3); margin-bottom:5px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; }
+
+    .q-main { flex:1; display:flex; flex-direction:column; padding:24px 28px; max-width:1000px; margin:0 auto; width:100%; }
+
+    .big-timer {
+      font-family:'Space Grotesk',sans-serif;
+      font-size:5.5rem; font-weight:800;
+      text-align:center; line-height:1;
+      transition:color .3s;
+      text-shadow:0 0 40px currentColor;
+    }
+    .big-timer.urgent { color:var(--red2); animation:pulse .6s infinite; }
+
+    .question-bubble {
+      background:var(--surface);
+      border:1px solid var(--border2);
+      border-radius:var(--radius-xl);
+      padding:36px 32px;
+      text-align:center;
+      font-family:'Space Grotesk',sans-serif;
+      font-size:clamp(1.2rem,3vw,1.9rem);
+      font-weight:700;
+      min-height:110px;
+      display:flex; align-items:center; justify-content:center;
+      margin-bottom:22px;
+      box-shadow:var(--shadow);
+      animation:slideIn .3s ease;
+      line-height:1.4;
+    }
+
+    .host-ans-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px;
+    }
+    .host-ans-tile {
+      border-radius:var(--radius);
+      padding:20px 18px;
+      font-size:1rem; font-weight:700;
+      display:flex; align-items:center; gap:12px;
+      color:#fff;
+      box-shadow:var(--shadow-sm);
+      transition:transform .15s;
+    }
+    .host-ans-tile:hover { transform:scale(1.01); }
+    .host-ans-tile.ans-0 { background:linear-gradient(135deg,#ef4444,#b91c1c); }
+    .host-ans-tile.ans-1 { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .host-ans-tile.ans-2 { background:linear-gradient(135deg,#f59e0b,#b45309); }
+    .host-ans-tile.ans-3 { background:linear-gradient(135deg,#10b981,#047857); }
+    .tile-shape { width:36px; height:36px; background:rgba(0,0,0,.2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .tile-text  { flex:1; }
+
+    .answered-pill {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:50px; padding:10px 20px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .answered-pill .ac { font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:800; color:var(--cyan2); }
+
+    /* ── REVEAL SCREEN ── */
+    .reveal-bars {
+      display:flex; gap:10px; margin:16px 0; flex-wrap:wrap;
+    }
+    .reveal-bar-item {
+      flex:1; min-width:120px;
+      border-radius:var(--radius-sm);
+      padding:16px 12px;
+      text-align:center;
+      font-weight:700;
+      transition:transform .3s;
+    }
+    .reveal-bar-item.correct-ans {
+      border:3px solid rgba(255,255,255,.8);
+      box-shadow:0 0 30px rgba(255,255,255,.2);
+      transform:scale(1.04);
+    }
+    .reveal-bar-item .rcount { font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:800; }
+    .reveal-bar-item .rlabel { font-size:.8rem; margin-top:4px; opacity:.85; }
+    .reveal-bar-item .rcheck { font-size:1.2rem; margin-top:6px; }
+
+    /* ── ANIMATED LEADERBOARD ── */
+    .lb-section { max-width:560px; margin:0 auto; }
+    .lb-section h3 { font-family:'Space Grotesk',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:14px; text-align:center; }
+
+    .lb-animated { position:relative; min-height:280px; }
+    .lb-entry {
+      position:absolute; left:0; right:0;
+      display:flex; align-items:center; gap:12px;
+      padding:11px 16px;
+      border-radius:10px;
+      background:var(--surface2);
+      border:1px solid var(--border);
+      transition:top .55s cubic-bezier(.34,1.2,.64,1), opacity .3s;
+      will-change:top;
+    }
+    .lb-entry.me   { border-color:rgba(124,58,237,.5); background:rgba(124,58,237,.12); }
+    .lb-entry.gold { border-color:rgba(251,191,36,.4); }
+    .lb-rank  { font-size:1rem; width:26px; text-align:center; font-weight:800; flex-shrink:0; }
+    .lb-av    { font-size:1.2rem; flex-shrink:0; }
+    .lb-name  { flex:1; font-size:.9rem; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lb-score { font-weight:800; color:var(--yellow2); font-size:.9rem; }
+    .lb-delta {
+      font-size:.72rem; font-weight:800; min-width:26px; text-align:right; flex-shrink:0;
+    }
+    .lb-delta.up   { color:var(--green2); }
+    .lb-delta.down { color:var(--red2); }
+    .lb-delta.same { color:var(--text3); }
+
+    /* ── PODIUM SCREEN ── */
+    .podium-screen {
+      min-height:100vh;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:50px 24px; text-align:center;
+      background:
+        radial-gradient(ellipse at 50% 20%, rgba(124,58,237,.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 80%, rgba(6,182,212,.2) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(236,72,153,.15) 0%, transparent 50%);
+    }
+    .podium-title {
+      font-family:'Space Grotesk',sans-serif;
+      font-size:clamp(2rem,6vw,4rem);
+      font-weight:800;
+      background:linear-gradient(135deg,#fcd34d,#f97316,#ec4899);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      margin-bottom:6px;
+      animation:popIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    .full-lb-wrap { max-width:480px; margin:0 auto 30px; width:100%; }
+    .full-lb-row {
+      display:flex; align-items:center; gap:12px;
+      padding:11px 16px; border-radius:10px;
+      background:var(--surface2); border:1px solid var(--border);
+      margin-bottom:6px;
+      animation:fadeInUp .4s ease both;
+    }
+    .full-lb-row.top1 { border-color:rgba(251,191,36,.5); background:rgba(251,191,36,.08); }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">⚡ Limited</div>
+  <div class="topbar-right">
+    <button class="btn btn-secondary btn-sm" onclick="safeExit()">✕ Exit</button>
+  </div>
+</div>
+
+<div id="root"></div>
+
+<script src="app.js"></script>
+<script>
+const SHAPES     = ['▲','◆','●','■'];
+const ANS_COLORS = ['#ef4444','#3b82f6','#f59e0b','#10b981'];
+const CONFETTI_COLORS = ['#f59e0b','#ec4899','#7c3aed','#06b6d4','#10b981','#ef4444','#fcd34d','#fff'];
+
+const params  = new URLSearchParams(location.search);
+let pin       = params.get('pin')  || null;
+let quizId    = params.get('quiz') || null;
+let quiz      = null;
+let questions = [];
+let qIndex    = 0;
+let phase     = 'lobby';
+let timerVal  = 20;
+let timerInt  = null;
+let pollInt   = null;
+let answerCounts  = [0,0,0,0];
+let randomNamesOn = false;
+let prevRanks     = {};  // playerId → rank (for delta animation)
+
+const root = document.getElementById('root');
+
+// ══════════════════════════════════════════════════════════════
+seedIfEmpty();
+if (!pin) showQuizPicker();
+else {
+  quiz = getQuiz(quizId);
+  if (!quiz) showQuizPicker(); else { initSession(); showLobby(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUIZ PICKER
+// ══════════════════════════════════════════════════════════════
+function showQuizPicker() {
+  const quizzes = getQuizzes();
+  root.innerHTML = `
+    <div style="max-width:720px;margin:0 auto;padding:60px 24px">
+      <div style="text-align:center;margin-bottom:40px">
+        <div style="font-size:3.5rem;margin-bottom:12px">🎓</div>
+        <h1 style="font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:800;margin-bottom:8px">Host a Game</h1>
+        <p style="color:var(--text2)">Choose a quiz. Students join with a 6-digit PIN.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+        ${quizzes.map(q=>`
+          <div class="mode-card" style="--c:var(--purple)" onclick="pickQuiz('${q.id}')">
+            <div style="font-size:2rem;margin-bottom:10px">${q.emoji||'📚'}</div>
+            <div style="font-weight:700;font-size:.95rem;margin-bottom:4px">${q.title}</div>
+            <div style="color:var(--text3);font-size:.78rem">${q.questions.length} questions</div>
+          </div>
+        `).join('')}
+      </div>
+      ${!quizzes.length?`<div style="text-align:center;padding:50px 0;color:var(--text3)">No quizzes yet. <a href="editor.html" style="color:var(--purple2)">Create one first!</a></div>`:''}
+      <div style="text-align:center;margin-top:28px">
+        <a href="index.html" class="btn btn-secondary">← Home</a>
+      </div>
+    </div>
+  `;
+}
+
+function pickQuiz(id) {
+  quiz   = getQuiz(id); quizId = id;
+  if (!quiz.questions.length) { alert('This quiz has no questions!'); return; }
+  pin = String(Math.floor(100000 + Math.random()*900000));
+  const url = new URL(location.href);
+  url.searchParams.set('pin',  pin);
+  url.searchParams.set('quiz', quizId);
+  history.replaceState({},  '', url);
+  initSession(); showLobby();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SESSION
+// ══════════════════════════════════════════════════════════════
+function sessionKey()     { return 'limited_session_'+pin; }
+function getSession()     { try{return JSON.parse(localStorage.getItem(sessionKey()))||null;}catch{return null;} }
+function setSession(d)    { localStorage.setItem(sessionKey(), JSON.stringify(d)); }
+function updateSession(p) { setSession({...getSession()||{},...p}); }
+function getPlayers()     { const s=getSession(); return s?Object.values(s.players):[]; }
+
+function initSession() {
+  questions = shuffle([...quiz.questions]);
+  setSession({
+    pin, quizId,
+    quizTitle:   quiz.title,
+    quizEmoji:   quiz.emoji||'📚',
+    phase:       'lobby',
+    qIndex:      0,
+    questions,
+    players:     {},
+    currentQ:    null,
+    timeLimit:   0,
+    startedAt:   null,
+    revealAt:    null,
+    randomNames: false,
+    kickedIds:   [],
+    answerCounts:[0,0,0,0]
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOBBY
+// ══════════════════════════════════════════════════════════════
+function showLobby() {
+  phase = 'lobby';
+  updateSession({phase:'lobby'});
+  clearInterval(timerInt);
+
+  const joinUrl = location.origin + location.pathname.replace('host.html','join.html')+'?pin='+pin;
+
+  root.innerHTML = `
+    <div class="lobby-wrap">
+      <div class="quiz-badge">${quiz.emoji||'📚'} ${quiz.title} &nbsp;·&nbsp; ${quiz.questions.length} questions</div>
+
+      <div class="pin-card">
+        <div class="pin-label">Game PIN</div>
+        <div class="pin-num">${pin}</div>
+      </div>
+
+      <p style="color:var(--text3);font-size:.82rem;margin-bottom:10px">Share this link with students:</p>
+      <div class="join-url-row">
+        <div class="join-url-box">${joinUrl}</div>
+        <button class="btn btn-secondary btn-sm" onclick="copyLink('${joinUrl}')">📋 Copy</button>
+      </div>
+
+      <div class="lobby-options mt-4">
+        <div class="toggle-row" onclick="toggleRandomNames()">
+          <div class="toggle-label">
+            <strong>� Random Names</strong>
+            <span>Students get a slot machine to pick a fun name</span>
+          </div>
+          <div class="toggle" id="rnToggle"></div>
+        </div>
+      </div>
+
+      <div class="players-wrap mt-4">
+        <div style="font-size:.82rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">
+          Players — <span id="playerCount">0</span> joined
+          <span style="font-size:.72rem;margin-left:6px;opacity:.6">(✕ to remove)</span>
+        </div>
+        <div class="players-grid" id="playerGrid">
+          <div class="waiting-dots">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span style="margin-left:8px">Waiting for players</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-xl mt-6" id="startBtn" onclick="startGame()" disabled>
+        ▶ Start Game
+      </button>
+      <p class="text-muted mt-2" style="font-size:.78rem">Need at least 1 player</p>
+    </div>
+  `;
+
+  pollPlayers();
+}
+
+function toggleRandomNames() {
+  randomNamesOn = !randomNamesOn;
+  updateSession({randomNames:randomNamesOn});
+  const t=$('rnToggle'); if(t) t.className='toggle'+(randomNamesOn?' on':'');
+}
+function kickPlayer(id) {
+  const s=getSession(); if(!s) return;
+  if(!s.kickedIds) s.kickedIds=[];
+  s.kickedIds.push(id);
+  delete s.players[id];
+  setSession(s);
+}
+function copyLink(url) {
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.querySelector('.join-url-row .btn');
+    if(btn){btn.textContent='✅ Copied!'; setTimeout(()=>btn.textContent='📋 Copy',2000);}
+  }).catch(()=>prompt('Copy this link:',url));
+}
+
+function pollPlayers() {
+  clearInterval(pollInt);
+  pollInt = setInterval(()=>{
+    const players=getPlayers();
+    const grid=$('playerGrid'), count=$('playerCount'), startBtn=$('startBtn');
+    if(!grid){clearInterval(pollInt);return;}
+    count.textContent=players.length;
+    if(!players.length){
+      grid.innerHTML=`<div class="waiting-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:8px">Waiting for players</span></div>`;
+    } else {
+      grid.innerHTML=players.map(p=>`
+        <div class="player-chip">
+          ${p.avatar} ${p.name}
+          <button class="kick-btn" title="Remove" onclick="kickPlayer('${p.id}')">✕</button>
+        </div>
+      `).join('');
+    }
+    if(startBtn) startBtn.disabled=!players.length;
+  },700);
+}
+
+// ══════════════════════════════════════════════════════════════
+// GAME
+// ══════════════════════════════════════════════════════════════
+function startGame() { clearInterval(pollInt); qIndex=0; prevRanks={}; showQuestion(); }
+
+function showQuestion() {
+  if(qIndex>=questions.length){showPodium();return;}
+  phase='question';
+  const q=questions[qIndex];
+  timerVal=q.timeLimit||20;
+  answerCounts=[0,0,0,0];
+  updateSession({phase:'question',qIndex,currentQ:q,timeLimit:timerVal,startedAt:Date.now(),revealAt:null,answerCounts:[0,0,0,0]});
+
+  root.innerHTML=`
+    <div class="q-screen">
+      <div class="q-top-bar">
+        <div>
+          <span class="badge badge-purple">Q${qIndex+1} / ${questions.length}</span>
+        </div>
+        <div class="q-progress-wrap">
+          <div class="q-prog-label">Progress</div>
+          <div class="progress-wrap">
+            <div class="progress-bar" style="width:${(qIndex/questions.length)*100}%"></div>
+          </div>
+        </div>
+        <div class="answered-pill">
+          <div class="ac" id="answeredCount">0</div>
+          <div style="color:var(--text3);font-size:.82rem">/ ${getPlayers().length} answered</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="skipToReveal()">⏭ Skip</button>
+      </div>
+
+      <div class="q-main">
+        <div class="big-timer" id="bigTimer">${timerVal}</div>
+        <div class="question-bubble">${q.question}</div>
+        <div class="host-ans-grid">
+          ${q.answers.map((a,i)=>`
+            <div class="host-ans-tile ans-${i}">
+              <div class="tile-shape">${SHAPES[i]}</div>
+              <div class="tile-text">${a}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  startHostTimer(q);
+  pollAnswers();
+}
+
+function startHostTimer(q) {
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>{
+    timerVal--;
+    const t=$('bigTimer');
+    if(t){t.textContent=timerVal; if(timerVal<=5)t.classList.add('urgent');}
+    if(timerVal<=0){clearInterval(timerInt);revealAnswers();}
+  },1000);
+}
+
+function pollAnswers() {
+  clearInterval(pollInt);
+  pollInt=setInterval(()=>{
+    const s=getSession(); if(!s) return;
+    answerCounts=s.answerCounts||[0,0,0,0];
+    const total=answerCounts.reduce((a,b)=>a+b,0);
+    const el=$('answeredCount'); if(el) el.textContent=total;
+    const players=getPlayers();
+    if(players.length>0 && total>=players.length){clearInterval(pollInt);clearInterval(timerInt);revealAnswers();}
+  },500);
+}
+
+function skipToReveal(){clearInterval(timerInt);clearInterval(pollInt);revealAnswers();}
+
+// ══════════════════════════════════════════════════════════════
+// REVEAL + ANIMATED LEADERBOARD
+// ══════════════════════════════════════════════════════════════
+function revealAnswers() {
+  phase='reveal';
+  const s=getSession(); answerCounts=(s&&s.answerCounts)||[0,0,0,0];
+  const q=questions[qIndex];
+  updateSession({phase:'reveal',revealAt:Date.now()});
+  clearInterval(timerInt); clearInterval(pollInt);
+
+  // compute new rankings and deltas
+  const players=getPlayers().sort((a,b)=>b.score-a.score);
+  const newRanks={};
+  players.forEach((p,i)=>newRanks[p.id]=i);
+  const deltas={};
+  players.forEach(p=>{
+    const prev=prevRanks[p.id];
+    deltas[p.id]= prev===undefined ? 'new' : prev>newRanks[p.id] ? 'up' : prev<newRanks[p.id] ? 'down' : 'same';
+  });
+
+  root.innerHTML=`
+    <div class="q-screen">
+      <div class="q-top-bar">
+        <span class="badge badge-green">✅ Q${qIndex+1} Results</span>
+        <span style="color:var(--text2);font-size:.88rem">${quiz.emoji} ${quiz.title}</span>
+      </div>
+      <div class="q-main">
+        <div class="question-bubble" style="font-size:clamp(1rem,2.5vw,1.4rem)">${q.question}</div>
+
+        <div class="reveal-bars">
+          ${q.answers.map((a,i)=>`
+            <div class="reveal-bar-item ans-${i} ${i===q.correct?'correct-ans':''}" style="background:${ANS_COLORS[i]}">
+              <div class="rcount">${answerCounts[i]||0}</div>
+              <div class="rlabel">${a}</div>
+              ${i===q.correct?'<div class="rcheck">✅</div>':''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="lb-section mt-4">
+          <h3>🏆 Top 5</h3>
+          <div class="lb-animated" id="lbAnimated" style="height:${Math.min(players.length,5)*58}px">
+            ${buildAnimatedLB(players.slice(0,5), deltas)}
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:28px">
+          ${qIndex+1<questions.length
+            ? `<button class="btn btn-primary btn-lg" onclick="nextQuestion()">Next Question ➜</button>`
+            : `<button class="btn btn-primary btn-lg" onclick="showPodium()">🏆 Final Results</button>`
+          }
+        </div>
+      </div>
+    </div>
+  `;
+
+  // animate entries sliding into position
+  setTimeout(animateLBEntries, 80);
+
+  // save prevRanks for next round
+  prevRanks={...newRanks};
+}
+
+function buildAnimatedLB(players, deltas) {
+  return players.map((p,i)=>{
+    const d=deltas[p.id]||'same';
+    const deltaIcon = d==='up' ? '▲' : d==='down' ? '▼' : d==='new' ? '★' : '–';
+    const rankEmoji = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+    return `
+      <div class="lb-entry ${i===0?'gold':''}" id="lbe_${p.id}" style="top:${i*58}px;opacity:1">
+        <div class="lb-rank">${rankEmoji}</div>
+        <div class="lb-av">${p.avatar}</div>
+        <div class="lb-name">${p.name}</div>
+        <div class="lb-score">${fmtNum(p.score)}</div>
+        <div class="lb-delta ${d}">${deltaIcon}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function animateLBEntries() {
+  const entries=document.querySelectorAll('.lb-entry');
+  entries.forEach((el,i)=>{
+    // slight stagger pop-in
+    el.style.opacity='0';
+    el.style.transform='translateX(-12px)';
+    setTimeout(()=>{
+      el.style.transition='opacity .3s, transform .4s cubic-bezier(.34,1.56,.64,1), top .55s cubic-bezier(.34,1.2,.64,1)';
+      el.style.opacity='1';
+      el.style.transform='none';
+    }, i*80);
+  });
+}
+
+function nextQuestion(){qIndex++;showQuestion();}
+
+// ══════════════════════════════════════════════════════════════
+// PODIUM
+// ══════════════════════════════════════════════════════════════
+function showPodium() {
+  phase='podium';
+  updateSession({phase:'podium'});
+  clearInterval(timerInt); clearInterval(pollInt);
+
+  const players=getPlayers().sort((a,b)=>b.score-a.score);
+  const top3=players.slice(0,3);
+  const podiumOrder=[top3[1],top3[0],top3[2]].filter(Boolean);
+  const standClass=[2,1,3];
+  const standH=[88,120,66];
+
+  root.innerHTML=`
+    <div class="confetti-wrap" id="confettiWrap"></div>
+    <div class="podium-screen">
+      <div class="podium-title">🏆 Final Results!</div>
+      <p style="color:var(--text2);font-size:1rem;margin-top:4px">${quiz.emoji} ${quiz.title}</p>
+
+      <div class="podium-row" style="margin:50px 0 36px">
+        ${podiumOrder.map((p,i)=>{
+          const rank=standClass[i];
+          return p?`
+            <div class="podium-block">
+              <div class="podium-av p${rank}">${p.avatar}</div>
+              <div style="font-weight:700;font-size:.9rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
+              <div style="font-size:.78rem;color:var(--yellow2);font-weight:700">${fmtNum(p.score)} pts</div>
+              <div class="podium-stand stand-${rank}" style="height:${standH[i]}px">
+                ${rank===1?'🥇':rank===2?'🥈':'🥉'}
+              </div>
+            </div>
+          `:''
+        }).join('')}
+      </div>
+
+      ${players.length>0?`
+        <div class="full-lb-wrap">
+          <div style="font-size:.78rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;text-align:center">Full Leaderboard</div>
+          ${players.map((p,i)=>`
+            <div class="full-lb-row ${i===0?'top1':''}" style="animation-delay:${i*.06}s">
+              <div style="width:24px;text-align:center;font-weight:800">${['🥇','🥈','🥉'][i]||i+1}</div>
+              <div style="font-size:1.2rem">${p.avatar}</div>
+              <div style="flex:1;font-weight:600;font-size:.9rem">${p.name}</div>
+              <div style="font-weight:800;color:var(--yellow2)">${fmtNum(p.score)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `:''}
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="btn btn-primary btn-lg" onclick="playAgain()">↺ Play Again</button>
+        <a href="index.html" class="btn btn-secondary btn-lg">🏠 Home</a>
+      </div>
+    </div>
+  `;
+
+  launchConfetti();
+  setTimeout(launchConfetti, 3000);
+}
+
+function playAgain(){clearInterval(timerInt);clearInterval(pollInt);initSession();showLobby();}
+
+function safeExit(){
+  clearInterval(timerInt);clearInterval(pollInt);
+  if(phase!=='lobby'&&!confirm('Exit the game? Progress will be lost.')) return;
+  window.location.href='index.html';
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════════════════════════════
+function launchConfetti(){
+  const wrap=document.querySelector('.confetti-wrap'); if(!wrap) return;
+  for(let i=0;i<150;i++){
+    const p=document.createElement('div');
+    p.className='confetti-piece';
+    p.style.left=Math.random()*100+'vw';
+    p.style.top='-20px';
+    p.style.background=CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];
+    const size=6+Math.random()*10;
+    p.style.width=size+'px'; p.style.height=size+'px';
+    p.style.animationDuration=(2.5+Math.random()*3)+'s';
+    p.style.animationDelay=Math.random()*1.5+'s';
+    p.style.borderRadius=Math.random()>.4?'50%':'3px';
+    p.style.transform=`rotate(${Math.random()*360}deg)`;
+    wrap.appendChild(p);
+  }
+}
+</script>
+</body>
+</html>

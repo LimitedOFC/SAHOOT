@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Limited – Join Game</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { background:#0b0b18; }
+
+    .center-screen {
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:30px 20px;
+      text-align:center;
+    }
+
+    /* PIN ENTRY */
+    .pin-entry-box {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:40px 36px;
+      width:100%;
+      max-width:420px;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+    }
+    .pin-entry-box h1 { font-size:2rem; font-weight:900; margin-bottom:6px; }
+    .pin-entry-box p  { color:var(--muted); margin-bottom:24px; }
+    .big-input {
+      font-size:2.5rem !important;
+      font-weight:900 !important;
+      text-align:center !important;
+      letter-spacing:8px;
+      padding:16px !important;
+      border-radius:14px !important;
+    }
+    .name-input { font-size:1.2rem !important; text-align:center !important; padding:14px !important; }
+
+    /* AVATAR PICKER */
+    .avatar-grid {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:center;
+      margin:12px 0;
+    }
+    .av-opt {
+      font-size:1.8rem;
+      cursor:pointer;
+      width:48px; height:48px;
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      background:var(--surface2);
+      border:2px solid transparent;
+      transition:border-color .15s, transform .15s;
+    }
+    .av-opt:hover    { transform:scale(1.1); }
+    .av-opt.selected { border-color:var(--accent); background:rgba(109,40,217,.2); }
+
+    /* ── SLOT MACHINE ── */
+    .slot-wrap {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:36px 32px;
+      width:100%;
+      max-width:460px;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+    }
+    .slot-title { font-size:1.5rem; font-weight:900; margin-bottom:4px; }
+    .slot-sub   { color:var(--muted); font-size:.88rem; margin-bottom:24px; }
+
+    .slot-machine {
+      background:#0a0a18;
+      border:2px solid var(--accent);
+      border-radius:16px;
+      padding:20px 10px;
+      margin-bottom:20px;
+      overflow:hidden;
+      position:relative;
+      height:72px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .slot-machine::before,
+    .slot-machine::after {
+      content:'';
+      position:absolute;
+      left:0; right:0;
+      height:24px;
+      z-index:2;
+      pointer-events:none;
+    }
+    .slot-machine::before { top:0;    background:linear-gradient(to bottom, #0a0a18, transparent); }
+    .slot-machine::after  { bottom:0; background:linear-gradient(to top,    #0a0a18, transparent); }
+
+    .slot-reel {
+      font-size:1.5rem;
+      font-weight:900;
+      text-align:center;
+      letter-spacing:.5px;
+      transition:transform .08s linear;
+      line-height:1;
+      color:#fff;
+    }
+    .slot-reel.spinning { color:rgba(255,255,255,.6); }
+
+    .name-choices {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      margin-bottom:20px;
+    }
+    .name-choice {
+      background:var(--surface2);
+      border:2px solid var(--border);
+      border-radius:12px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:.92rem;
+      transition:border-color .15s, background .15s, transform .1s;
+      text-align:left;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .name-choice:hover  { border-color:var(--accent); background:rgba(109,40,217,.15); transform:scale(1.02); }
+    .name-choice.picked { border-color:var(--accent); background:rgba(109,40,217,.25); }
+    .name-choice .nc-av { font-size:1.2rem; }
+
+    /* WAITING */
+    .waiting-screen { max-width:500px; width:100%; }
+    .big-pin {
+      font-size:4rem;
+      font-weight:900;
+      letter-spacing:8px;
+      background:linear-gradient(135deg,#a78bfa,#38bdf8);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      margin:16px 0;
+    }
+    .pulse-ring {
+      width:80px; height:80px;
+      border-radius:50%;
+      border:4px solid var(--accent);
+      animation:ripple 1.5s infinite;
+      margin:20px auto;
+    }
+    @keyframes ripple { 0%{transform:scale(.9);opacity:1} 100%{transform:scale(1.5);opacity:0} }
+
+    /* KICKED */
+    .kicked-box {
+      background:rgba(239,68,68,.1);
+      border:2px solid var(--red);
+      border-radius:20px;
+      padding:40px 32px;
+      max-width:400px;
+      text-align:center;
+    }
+
+    /* QUESTION */
+    .student-q { width:100%; max-width:680px; }
+    .student-q-top {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:20px; flex-wrap:wrap; gap:10px;
+    }
+    .student-timer {
+      font-size:3rem; font-weight:900; line-height:1; min-width:60px; text-align:center; transition:color .3s;
+    }
+    .student-timer.urgent { color:var(--red); animation:pulse .5s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+    .student-q-text {
+      background:var(--surface); border:1px solid var(--border); border-radius:18px;
+      padding:28px 24px; font-size:clamp(1.1rem,3.5vw,1.5rem); font-weight:800;
+      text-align:center; margin-bottom:22px; min-height:90px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .student-ans-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .student-ans-btn {
+      padding:22px 16px; border-radius:16px; border:none;
+      font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:900;
+      cursor:pointer; color:#fff; display:flex; align-items:center; gap:10px;
+      transition:transform .12s, box-shadow .12s, opacity .12s; text-align:left;
+    }
+    .student-ans-btn:hover  { transform:scale(1.03); box-shadow:0 6px 25px rgba(0,0,0,.3); }
+    .student-ans-btn:active { transform:scale(.97); }
+    .student-ans-btn.ans-0  { background:linear-gradient(135deg,#ef4444,#dc2626); }
+    .student-ans-btn.ans-1  { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+    .student-ans-btn.ans-2  { background:linear-gradient(135deg,#f59e0b,#d97706); }
+    .student-ans-btn.ans-3  { background:linear-gradient(135deg,#22c55e,#16a34a); }
+    .student-ans-btn.picked       { opacity:.5; pointer-events:none; }
+    .student-ans-btn.correct-pick { border:3px solid #fff; box-shadow:0 0 20px rgba(255,255,255,.4); opacity:1; }
+    .student-ans-btn.wrong-pick   { opacity:.3; pointer-events:none; }
+    .shape-icon { font-size:1.4rem; flex-shrink:0; }
+
+    /* FEEDBACK */
+    .feedback-big {
+      font-size:clamp(2rem,8vw,4rem); font-weight:900; margin-bottom:12px;
+      animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+    .feedback-pts {
+      font-size:1.5rem; font-weight:900; color:var(--yellow);
+      animation:popIn .4s .15s cubic-bezier(.34,1.56,.64,1) backwards;
+    }
+
+    /* PODIUM */
+    .confetti-wrap { position:fixed; inset:0; pointer-events:none; z-index:5; overflow:hidden; }
+    .confetti-piece {
+      position:absolute; width:10px; height:10px; border-radius:2px;
+      animation:confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%  { transform:translateY(-20px) rotate(0deg); opacity:1; }
+      100%{ transform:translateY(110vh) rotate(720deg); opacity:0; }
+    }
+    .podium-row { display:flex; align-items:flex-end; justify-content:center; gap:12px; margin:30px 0 20px; }
+    .podium-block { display:flex; flex-direction:column; align-items:center; gap:6px; animation:riseUp .8s cubic-bezier(.34,1.56,.64,1) forwards; opacity:0; }
+    .podium-block:nth-child(1){ animation-delay:.2s; }
+    .podium-block:nth-child(2){ animation-delay:0s; }
+    .podium-block:nth-child(3){ animation-delay:.4s; }
+    @keyframes riseUp { from{transform:translateY(60px);opacity:0} to{transform:none;opacity:1} }
+    .podium-avatar { font-size:2rem; width:60px; height:60px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; border:3px solid transparent; }
+    .podium-stand  { border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-size:1.6rem; width:90px; }
+    .stand-1 { background:linear-gradient(135deg,#fbbf24,#f59e0b); height:100px; border:3px solid #fcd34d; }
+    .stand-2 { background:linear-gradient(135deg,#94a3b8,#64748b); height:75px;  border:3px solid #cbd5e1; }
+    .stand-3 { background:linear-gradient(135deg,#c2855a,#92523a); height:58px;  border:3px solid #d4a574; }
+    .avatar-1 { border-color:#fbbf24; }
+    .avatar-2 { border-color:#94a3b8; }
+    .avatar-3 { border-color:#c2855a; }
+
+    @media(max-width:480px){
+      .student-ans-grid { grid-template-columns:1fr; }
+      .name-choices { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="app.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const AVATARS = ['🦊','🐺','🐸','🦁','🐯','🐻','🦋','🐙','🦄','🐲','🤖','👾','🎃','🦅','🐳'];
+const SHAPES  = ['▲','◆','●','■'];
+const CONFETTI_COLORS = ['#f59e0b','#ec4899','#6d28d9','#0ea5e9','#22c55e','#ef4444','#fcd34d'];
+
+// Random name word banks
+const ADJECTIVES = ['Cosmic','Shadow','Golden','Turbo','Neon','Frozen','Blazing','Silent','Wild','Mega','Ultra','Hyper','Speedy','Mighty','Clever','Slick','Epic','Storm','Iron','Swift'];
+const NOUNS      = ['Tiger','Panda','Dragon','Ninja','Comet','Rocket','Phoenix','Wizard','Shark','Eagle','Wolf','Fox','Cobra','Viper','Falcon','Panther','Rhino','Titan','Ghost','Blaze'];
+
+const params   = new URLSearchParams(location.search);
+let pin        = params.get('pin') || '';
+let playerId   = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+let playerName = '';
+let avatar     = AVATARS[0];
+let myScore    = 0;
+let myStreak   = 0;
+let lastQIndex = -1;
+let answered   = false;
+let pollInt    = null;
+let timerInt   = null;
+let timerVal   = 20;
+let slotChoices= [];
+let chosenIdx  = -1;
+let kickCheckInt = null;
+
+const root = document.getElementById('root');
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+if (pin) {
+  const s = getSessionByPin(pin);
+  if (s && s.randomNames) showSlotMachine();
+  else showNameEntry();
+} else {
+  showPinEntry();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PIN ENTRY
+// ═══════════════════════════════════════════════════════════════
+function showPinEntry() {
+  root.innerHTML = `
+    <div class="center-screen">
+      <div class="pin-entry-box">
+        <div style="font-size:3rem;margin-bottom:10px">⚡</div>
+        <h1>Join a Game</h1>
+        <p>Enter the PIN shown on the host screen</p>
+        <input class="big-input" type="text" id="pinInput" inputmode="numeric" maxlength="6" placeholder="000000" autofocus/>
+        <button class="btn btn-primary w-full mt-3 btn-lg" onclick="submitPin()">Join →</button>
+        <p class="text-muted mt-3"><a href="index.html" style="color:var(--accent2)">← Back to home</a></p>
+      </div>
+    </div>
+  `;
+  $('pinInput').addEventListener('keydown', e => { if(e.key==='Enter') submitPin(); });
+}
+
+function submitPin() {
+  const val = $('pinInput').value.trim();
+  if (val.length !== 6) { alert('PIN must be 6 digits!'); return; }
+  const session = getSessionByPin(val);
+  if (!session) { alert('No game found with that PIN. Ask your teacher to start the lobby!'); return; }
+  if (session.phase === 'podium') { alert('That game has already ended!'); return; }
+  pin = val;
+  const url = new URL(location.href);
+  url.searchParams.set('pin', pin);
+  history.replaceState({}, '', url);
+  if (session.randomNames) showSlotMachine();
+  else showNameEntry();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SLOT MACHINE — random name picker
+// ═══════════════════════════════════════════════════════════════
+function generateChoices() {
+  const used = new Set(Object.values(getSessionByPin(pin)?.players||{}).map(p=>p.name));
+  const choices = [];
+  let tries = 0;
+  while (choices.length < 10 && tries < 200) {
+    tries++;
+    const adj  = ADJECTIVES[Math.floor(Math.random()*ADJECTIVES.length)];
+    const noun = NOUNS[Math.floor(Math.random()*NOUNS.length)];
+    const av   = AVATARS[Math.floor(Math.random()*AVATARS.length)];
+    const name = adj + noun;
+    if (!used.has(name) && !choices.find(c=>c.name===name)) {
+      choices.push({ name, avatar: av });
+    }
+  }
+  return choices;
+}
+
+function showSlotMachine() {
+  slotChoices = generateChoices();
+  chosenIdx   = -1;
+
+  root.innerHTML = `
+    <div class="center-screen">
+      <div class="slot-wrap">
+        <div class="slot-title">🎰 Pick Your Name!</div>
+        <div class="slot-sub">The slot machine picked 10 names for you. Choose one!</div>
+
+        <!-- SLOT DISPLAY -->
+        <div class="slot-machine" id="slotMachine">
+          <div class="slot-reel" id="slotReel">???</div>
+        </div>
+        <button class="btn btn-secondary w-full mb-4" id="spinBtn" onclick="spinSlot()">🎲 Spin Again</button>
+
+        <!-- 10 CHOICES -->
+        <div class="name-choices" id="nameChoices">
+          ${slotChoices.map((c,i)=>`
+            <div class="name-choice" id="choice_${i}" onclick="selectChoice(${i})">
+              <span class="nc-av">${c.avatar}</span>
+              <span>${c.name}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <button class="btn btn-primary w-full btn-lg" id="confirmBtn" onclick="confirmChoice()" disabled>
+          ✅ Use This Name
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Auto-spin on load
+  spinSlot();
+}
+
+function spinSlot() {
+  const reel    = $('slotReel');
+  const spinBtn = $('spinBtn');
+  if (!reel) return;
+  spinBtn.disabled = true;
+  reel.classList.add('spinning');
+
+  let ticks    = 0;
+  const total  = 28 + Math.floor(Math.random()*12); // how many ticks
+  const allNames = slotChoices.map(c=>c.name);
+
+  const spinInt = setInterval(()=>{
+    ticks++;
+    // pick random name to flash
+    const name = allNames[Math.floor(Math.random()*allNames.length)];
+    reel.textContent = name;
+
+    // slow down near end
+    if (ticks >= total) {
+      clearInterval(spinInt);
+      // land on a random choice and highlight it
+      const landIdx = Math.floor(Math.random()*slotChoices.length);
+      reel.textContent = slotChoices[landIdx].name;
+      reel.classList.remove('spinning');
+      highlightChoice(landIdx);
+      spinBtn.disabled = false;
+    }
+  }, ticks < total * 0.6 ? 60 : 120);
+
+  // variable speed: restart with proper timing
+  let delay = 60;
+  clearInterval(spinInt);
+
+  let tick2 = 0;
+  function frame() {
+    tick2++;
+    const name = allNames[Math.floor(Math.random()*allNames.length)];
+    if (reel) reel.textContent = name;
+
+    // ease out — get slower over time
+    const progress = tick2 / total;
+    delay = 60 + Math.floor(progress * progress * 320);
+
+    if (tick2 >= total) {
+      const landIdx = Math.floor(Math.random()*slotChoices.length);
+      if (reel) {
+        reel.textContent = slotChoices[landIdx].name;
+        reel.classList.remove('spinning');
+      }
+      highlightChoice(landIdx);
+      if (spinBtn) spinBtn.disabled = false;
+    } else {
+      setTimeout(frame, delay);
+    }
+  }
+  setTimeout(frame, delay);
+}
+
+function highlightChoice(idx) {
+  document.querySelectorAll('.name-choice').forEach((el,i) => {
+    el.classList.toggle('picked', i===idx);
+  });
+  chosenIdx = idx;
+  const btn = $('confirmBtn');
+  if (btn) btn.disabled = false;
+}
+
+function selectChoice(idx) {
+  highlightChoice(idx);
+  const reel = $('slotReel');
+  if (reel) reel.textContent = slotChoices[idx].name;
+}
+
+function confirmChoice() {
+  if (chosenIdx < 0) return;
+  playerName = slotChoices[chosenIdx].name;
+  avatar     = slotChoices[chosenIdx].avatar;
+  const session = getSessionByPin(pin);
+  if (!session) { alert('Game not found!'); return; }
+  const taken = Object.values(session.players||{}).find(p=>p.name===playerName);
+  if (taken) { alert('That name just got taken! Spin again.'); slotChoices=generateChoices(); showSlotMachine(); return; }
+  registerPlayer();
+  showWaiting();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MANUAL NAME ENTRY
+// ═══════════════════════════════════════════════════════════════
+function showNameEntry() {
+  root.innerHTML = `
+    <div class="center-screen">
+      <div class="pin-entry-box">
+        <div style="font-size:3rem;margin-bottom:10px">👤</div>
+        <h1>What's your name?</h1>
+        <p>Pick an avatar and enter your nickname</p>
+        <div class="avatar-grid" id="avatarGrid">
+          ${AVATARS.map((a,i)=>`<div class="av-opt ${i===0?'selected':''}" onclick="selectAvatar(${i},'${a}')">${a}</div>`).join('')}
+        </div>
+        <input class="name-input" type="text" id="nameInput" maxlength="20" placeholder="Your nickname..." autofocus/>
+        <button class="btn btn-primary w-full mt-3 btn-lg" onclick="joinGame()">Enter Game →</button>
+      </div>
+    </div>
+  `;
+  $('nameInput').addEventListener('keydown', e => { if(e.key==='Enter') joinGame(); });
+}
+
+function selectAvatar(i, a) {
+  avatar = a;
+  document.querySelectorAll('.av-opt').forEach((el,j) => el.classList.toggle('selected', j===i));
+}
+
+function joinGame() {
+  const name = $('nameInput').value.trim();
+  if (!name) { alert('Enter a nickname!'); return; }
+  const session = getSessionByPin(pin);
+  if (!session) { alert('Game not found! Check the PIN.'); return; }
+  const taken = Object.values(session.players||{}).find(p => p.name.toLowerCase()===name.toLowerCase());
+  if (taken) { alert('That name is taken! Choose a different one.'); return; }
+  playerName = name;
+  registerPlayer();
+  showWaiting();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION HELPERS
+// ═══════════════════════════════════════════════════════════════
+function sessionKey(p)     { return 'limited_session_' + (p||pin); }
+function getSessionByPin(p){ try { return JSON.parse(localStorage.getItem(sessionKey(p)))||null; } catch{return null;} }
+function getMySession()    { return getSessionByPin(pin); }
+function updateSession(patch) {
+  const s = getMySession() || {};
+  localStorage.setItem(sessionKey(), JSON.stringify({...s,...patch}));
+}
+function registerPlayer() {
+  const s = getMySession();
+  if (!s) return;
+  s.players[playerId] = { id:playerId, name:playerName, avatar, score:myScore, streak:myStreak, answeredQ:-1 };
+  localStorage.setItem(sessionKey(), JSON.stringify(s));
+}
+function updateMyScore() {
+  const s = getMySession();
+  if (!s || !s.players[playerId]) return;
+  s.players[playerId].score  = myScore;
+  s.players[playerId].streak = myStreak;
+  localStorage.setItem(sessionKey(), JSON.stringify(s));
+}
+function recordAnswer(qId, ansIdx) {
+  const s = getMySession();
+  if (!s || !s.players[playerId]) return;
+  s.players[playerId].answeredQ = s.qIndex;
+  if (!s.answerCounts) s.answerCounts = [0,0,0,0];
+  s.answerCounts[ansIdx] = (s.answerCounts[ansIdx]||0)+1;
+  localStorage.setItem(sessionKey(), JSON.stringify(s));
+}
+function amIKicked() {
+  const s = getMySession();
+  if (!s) return false;
+  if (s.kickedIds && s.kickedIds.includes(playerId)) return true;
+  if (s.players && !s.players[playerId]) return true;
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WAITING LOBBY
+// ═══════════════════════════════════════════════════════════════
+function showWaiting() {
+  const s = getMySession();
+  root.innerHTML = `
+    <div class="center-screen">
+      <div class="waiting-screen">
+        <div style="font-size:2.5rem;margin-bottom:8px">${avatar}</div>
+        <div style="font-size:1.3rem;font-weight:900">${playerName}</div>
+        <div class="big-pin">${pin}</div>
+        <div class="pulse-ring"></div>
+        <p style="color:var(--muted);font-size:1rem">You're in! Waiting for the host to start...</p>
+        <p style="margin-top:12px;font-size:1.4rem;font-weight:800">${s?.quizEmoji||'📚'} ${s?.quizTitle||'Quiz'}</p>
+      </div>
+    </div>
+  `;
+  startPolling();
+  startKickCheck();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KICK CHECK
+// ═══════════════════════════════════════════════════════════════
+function startKickCheck() {
+  clearInterval(kickCheckInt);
+  kickCheckInt = setInterval(()=>{
+    if (amIKicked()) {
+      clearInterval(kickCheckInt);
+      clearInterval(pollInt);
+      clearInterval(timerInt);
+      showKicked();
+    }
+  }, 800);
+}
+
+function showKicked() {
+  root.innerHTML = `
+    <div class="center-screen">
+      <div class="kicked-box">
+        <div style="font-size:4rem;margin-bottom:12px">🚫</div>
+        <h2 style="font-size:1.6rem;font-weight:900;color:var(--red);margin-bottom:8px">You were removed</h2>
+        <p style="color:var(--muted);margin-bottom:24px">The host removed you from this game.</p>
+        <a href="index.html" class="btn btn-secondary w-full">🏠 Go Home</a>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POLLING LOOP
+// ═══════════════════════════════════════════════════════════════
+function startPolling() {
+  clearInterval(pollInt);
+  pollInt = setInterval(tick, 500);
+}
+
+function tick() {
+  if (amIKicked()) { clearInterval(pollInt); clearInterval(timerInt); showKicked(); return; }
+  const s = getMySession();
+  if (!s) return;
+
+  if (s.phase === 'question') {
+    if (s.qIndex !== lastQIndex) {
+      lastQIndex = s.qIndex;
+      answered   = false;
+      clearInterval(timerInt);
+      showQuestion(s);
+    }
+  } else if (s.phase === 'reveal') {
+    if (answered || lastQIndex === s.qIndex) {
+      const el = document.querySelector('.waiting-next');
+      if (!el) showWaitingNext();
+    }
+  } else if (s.phase === 'podium') {
+    clearInterval(pollInt);
+    clearInterval(kickCheckInt);
+    showPodium(s);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUESTION
+// ═══════════════════════════════════════════════════════════════
+function showQuestion(s) {
+  clearInterval(pollInt);
+  const q  = s.currentQ;
+  timerVal = s.timeLimit || 20;
+
+  root.innerHTML = `
+    <div class="center-screen" style="justify-content:flex-start;padding-top:30px">
+      <div class="student-q">
+        <div class="student-q-top">
+          <span class="badge badge-purple">Q${s.qIndex+1}</span>
+          <div class="student-timer" id="sTimer">${timerVal}</div>
+          <div style="font-weight:800;font-size:.9rem;color:var(--muted)">💰 ${fmtNum(myScore)}</div>
+        </div>
+        <div class="student-q-text">${q.question}</div>
+        <div class="student-ans-grid" id="ansGrid">
+          ${q.answers.map((a,i)=>`
+            <button class="student-ans-btn ans-${i}" onclick="pickAnswer(${i})">
+              <span class="shape-icon">${SHAPES[i]}</span>${a}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  startStudentTimer(q);
+  startKickCheck();
+}
+
+function startStudentTimer(q) {
+  clearInterval(timerInt);
+  timerInt = setInterval(()=>{
+    timerVal--;
+    const t = $('sTimer');
+    if (t) { t.textContent = timerVal; if(timerVal<=5) t.classList.add('urgent'); }
+    if (timerVal<=0) { clearInterval(timerInt); if (!answered) timeUp(q); }
+  },1000);
+}
+
+function pickAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInt);
+
+  const s  = getMySession();
+  const q  = s.currentQ;
+  const ok = idx === q.correct;
+  const timeBonus = Math.floor(timerVal / (q.timeLimit||20) * 50);
+
+  document.querySelectorAll('.student-ans-btn').forEach((b,i)=>{
+    if (i===idx && ok)  b.classList.add('correct-pick');
+    else if (i===idx)   b.classList.add('wrong-pick');
+    else if (i!==q.correct) b.classList.add('picked');
+  });
+
+  if (ok) {
+    myStreak++;
+    const pts = 100 + timeBonus + (myStreak>2?(myStreak-2)*20:0);
+    myScore += pts;
+    updateMyScore();
+    recordAnswer(q.id, idx);
+    showFeedback(true, pts);
+  } else {
+    myStreak = 0;
+    updateMyScore();
+    recordAnswer(q.id, idx);
+    showFeedback(false, 0);
+  }
+}
+
+function timeUp(q) {
+  answered = true;
+  myStreak = 0;
+  updateMyScore();
+  showFeedback(false, 0, true);
+}
+
+function showFeedback(ok, pts, timeout=false) {
+  const msg = timeout ? '⏱ Too slow!' : ok ? '✅ Correct!' : '❌ Wrong!';
+  const sub = ok
+    ? `+${pts} points${myStreak>2?' 🔥 x'+myStreak+' streak!':''}`
+    : timeout ? 'Time ran out' : 'Better luck next time!';
+
+  const grid = $('ansGrid');
+  if (grid) {
+    const fb = document.createElement('div');
+    fb.style.cssText = 'text-align:center;padding:16px 0';
+    fb.innerHTML = `
+      <div class="feedback-big">${msg}</div>
+      <div class="feedback-pts">${sub}</div>
+      <div style="margin-top:8px;color:var(--muted);font-size:.85rem">Total: ${fmtNum(myScore)} pts</div>
+    `;
+    grid.parentNode.insertBefore(fb, grid);
+    grid.style.opacity = '.4';
+    grid.style.pointerEvents = 'none';
+  }
+  startPolling();
+}
+
+function showWaitingNext() {
+  const existing = document.querySelector('.waiting-next');
+  if (existing) return;
+  const d = document.createElement('div');
+  d.className = 'waiting-next';
+  d.style.cssText = 'text-align:center;padding:20px;color:var(--muted)';
+  d.innerHTML = '⏳ Waiting for next question...';
+  document.querySelector('.student-q')?.appendChild(d);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PODIUM
+// ═══════════════════════════════════════════════════════════════
+function showPodium(s) {
+  clearInterval(kickCheckInt);
+  const players   = Object.values(s.players).sort((a,b)=>b.score-a.score);
+  const myRank    = players.findIndex(p=>p.id===playerId)+1;
+  const top3      = players.slice(0,3);
+  const podiumOrder = [top3[1],top3[0],top3[2]].filter(Boolean);
+  const standClass  = [2,1,3];
+  const standH      = [75,100,58];
+
+  spawnConfetti();
+
+  root.innerHTML = `
+    <div class="confetti-wrap" id="confettiWrap"></div>
+    <div class="center-screen">
+      <div style="max-width:500px;width:100%">
+        <div style="font-size:clamp(1.8rem,6vw,3rem);font-weight:900;background:linear-gradient(135deg,#fcd34d,#f97316,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">🏆 Game Over!</div>
+        <p style="color:var(--muted)">${s.quizEmoji} ${s.quizTitle}</p>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin:20px 0">
+          <div style="font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Your Result</div>
+          <div style="font-size:2.5rem;font-weight:900;color:var(--yellow)">${fmtNum(myScore)} pts</div>
+          <div style="font-size:1rem;font-weight:800;margin-top:4px">Rank #${myRank || '?'} of ${players.length}</div>
+        </div>
+
+        <div class="podium-row">
+          ${podiumOrder.map((p,i)=> p ? `
+            <div class="podium-block">
+              <div class="podium-avatar avatar-${standClass[i]}">${p.avatar}</div>
+              <div style="font-size:.85rem;font-weight:900;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}${p.id===playerId?' (you)':''}</div>
+              <div style="font-size:.75rem;color:var(--muted)">${fmtNum(p.score)}</div>
+              <div class="podium-stand stand-${standClass[i]}" style="height:${standH[i]}px">${['🥈','🥇','🥉'][i]}</div>
+            </div>
+          ` : '').join('')}
+        </div>
+
+        <a href="index.html" class="btn btn-primary btn-lg w-full">🏠 Home</a>
+        <button class="btn btn-secondary btn-lg w-full mt-2" onclick="rejoinSame()">↺ Play Again</button>
+      </div>
+    </div>
+  `;
+  renderConfetti();
+}
+
+function rejoinSame() {
+  myScore=0; myStreak=0; lastQIndex=-1; answered=false;
+  playerId = 'p_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  const s = getSessionByPin(pin);
+  if (s && s.randomNames) showSlotMachine();
+  else showNameEntry();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONFETTI
+// ═══════════════════════════════════════════════════════════════
+function spawnConfetti() {
+  const wrap = document.querySelector('.confetti-wrap') || $('confettiWrap');
+  if (!wrap) return;
+  for (let i=0;i<100;i++){
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random()*100+'vw';
+    p.style.top  = '-20px';
+    p.style.background = CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];
+    p.style.width  = (6+Math.random()*10)+'px';
+    p.style.height = (6+Math.random()*10)+'px';
+    p.style.animationDuration = (2+Math.random()*3)+'s';
+    p.style.animationDelay   = Math.random()*2+'s';
+    p.style.borderRadius = Math.random()>.5?'50%':'2px';
+    wrap.appendChild(p);
+  }
+}
+function renderConfetti(){
+  setTimeout(()=>{ const w=document.querySelector('.confetti-wrap'); if(w) spawnConfetti(); },2500);
+}
+</script>
+</body>
+</html>

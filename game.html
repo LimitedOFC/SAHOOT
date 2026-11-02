@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Limited – Play</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .game-wrap { max-width:800px; margin:0 auto; padding:30px 20px; }
+
+    /* LOBBY */
+    .lobby { text-align:center; padding:60px 20px; }
+    .lobby h1 { font-size:2.5rem; font-weight:900; margin-bottom:8px; }
+    .lobby p  { color:var(--muted); margin-bottom:30px; font-size:1rem; }
+    .lobby-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:500px; margin:0 auto 30px; }
+    .lobby-stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+    .lobby-stat .val { font-size:1.8rem; font-weight:900; color:var(--accent2); }
+    .lobby-stat .lbl { font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+    /* QUESTION CARD */
+    .q-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:30px; }
+    .q-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; }
+    .q-progress-label { font-size:.85rem; color:var(--muted); font-weight:700; white-space:nowrap; }
+    .q-text { font-size:1.3rem; font-weight:800; text-align:center; margin:20px 0 28px; line-height:1.4; min-height:60px; }
+
+    /* TIMER */
+    .timer-num { font-size:1.4rem; font-weight:900; min-width:36px; text-align:center; }
+    .timer-num.urgent { color:var(--red); animation:pulse .5s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+    /* FEEDBACK */
+    .feedback-banner {
+      border-radius:14px;
+      padding:16px 22px;
+      text-align:center;
+      font-size:1.1rem;
+      font-weight:900;
+      margin-bottom:18px;
+      animation:slideIn .25s ease;
+    }
+    @keyframes slideIn { from{transform:translateY(-10px);opacity:0} to{transform:none;opacity:1} }
+    .feedback-banner.correct { background:rgba(34,197,94,.2); border:1px solid var(--green); color:#86efac; }
+    .feedback-banner.wrong   { background:rgba(239,68,68,.2);  border:1px solid var(--red);   color:#fca5a5; }
+
+    /* SCORE HUD */
+    .score-hud {
+      display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap;
+    }
+    .hud-pill {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:50px;
+      padding:7px 18px;
+      font-weight:800;
+      font-size:.9rem;
+      display:flex; align-items:center; gap:6px;
+    }
+    .hud-pill .hv { color:var(--yellow); font-size:1rem; }
+
+    /* MODE VISUALS */
+    /* Racing */
+    .track { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:16px; overflow:hidden; }
+    .track-label { font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:700; }
+    .car-row { display:flex; align-items:center; gap:10px; height:28px; }
+    .car-track { flex:1; background:var(--surface2); border-radius:50px; height:14px; position:relative; overflow:visible; }
+    .car-icon { position:absolute; top:50%; transform:translateY(-50%); transition:left .4s cubic-bezier(.34,1.56,.64,1); font-size:1.2rem; }
+    .finish-line { position:absolute; right:0; top:-4px; bottom:-4px; width:3px; background: repeating-linear-gradient(#fff 0,#fff 4px,#000 4px,#000 8px); }
+
+    /* Tower Defense */
+    .tower-area { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; text-align:center; }
+    .tower-hp { font-size:2.5rem; font-weight:900; color:var(--green); }
+    .tower-hp.low { color:var(--red); animation:pulse .8s infinite; }
+    .enemy-row { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-top:12px; font-size:1.4rem; }
+
+    /* Café */
+    .cafe-area { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; }
+    .customer-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+    .customer { font-size:1.8rem; position:relative; }
+    .customer .patience-bar { width:36px; height:4px; background:var(--surface2); border-radius:2px; margin-top:2px; overflow:hidden; }
+    .customer .patience-fill { height:100%; border-radius:2px; background:var(--green); transition:width .5s; }
+    .customer.mad .patience-fill { background:var(--red); }
+
+    /* Crypto */
+    .crypto-area { background:#0a1628; border:1px solid #1a3a5c; border-radius:14px; padding:20px; margin-bottom:16px; font-family:'Courier New',monospace; }
+    .crypto-log { font-size:.78rem; color:#4ade80; height:80px; overflow-y:auto; }
+    .crypto-balance { font-size:1.5rem; font-weight:900; color:#4ade80; margin-top:8px; }
+
+    /* Factory */
+    .factory-area { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; text-align:center; }
+    .factory-output { font-size:2rem; font-weight:900; color:var(--orange); }
+    .conveyor { display:flex; gap:8px; justify-content:center; margin-top:10px; font-size:1.5rem; overflow:hidden; }
+
+    /* Battle Royale */
+    .lives-row { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; justify-content:center; }
+    .life-icon { font-size:1.6rem; transition:opacity .3s; }
+    .life-icon.lost { opacity:.15; filter:grayscale(1); }
+
+    /* RESULT SCREEN */
+    .result { text-align:center; padding:50px 20px; }
+    .result .trophy { font-size:5rem; margin-bottom:16px; }
+    .result h1 { font-size:2.5rem; font-weight:900; margin-bottom:6px; }
+    .result .final-score { font-size:3.5rem; font-weight:900; color:var(--yellow); margin:16px 0; }
+    .result-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; max-width:440px; margin:0 auto 30px; }
+    .result-stat { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; }
+    .result-stat .rv { font-size:1.4rem; font-weight:900; }
+    .result-stat .rl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+    /* QUIZ SELECT */
+    .quiz-select-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:16px; }
+    .qs-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; cursor:pointer; transition:transform .15s,border-color .15s; }
+    .qs-card:hover { transform:translateY(-3px); border-color:var(--accent); }
+    .qs-card h3 { font-size:1rem; font-weight:900; }
+    .qs-card p  { color:var(--muted); font-size:.8rem; margin-top:4px; }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">⚡ Limited</div>
+  <div class="topbar-right">
+    <button class="btn btn-secondary btn-sm" onclick="exitGame()">✕ Exit</button>
+  </div>
+</div>
+
+<div class="game-wrap" id="gameWrap"></div>
+
+<script src="app.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const params   = new URLSearchParams(location.search);
+let mode       = params.get('mode') || 'classic';
+let quizId     = params.get('quiz') || null;
+let quiz       = null;
+let questions  = [];
+let qIndex     = 0;
+let score      = 0;
+let lives      = 3;
+let streak     = 0;
+let correct    = 0;
+let timerVal   = 20;
+let timerInt   = null;
+let answered   = false;
+let gameActive = false;
+let username   = localStorage.getItem('limited_username') || 'Player';
+
+// mode-specific
+let carProgress  = 0;   // racing
+let towerHP      = 10;  // tower defense
+let customers    = [];  // café
+let cryptoCoins  = 0;   // crypto
+let factoryUnits = 0;   // factory
+
+const wrap = $('gameWrap');
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+function boot() {
+  seedIfEmpty();
+  if (quizId) {
+    quiz = getQuiz(quizId);
+    if (!quiz) { showQuizSelect(); return; }
+    showLobby();
+  } else {
+    showQuizSelect();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUIZ SELECT
+// ═══════════════════════════════════════════════════════════════
+function showQuizSelect() {
+  const modeObj = GAME_MODES.find(m=>m.id===mode) || GAME_MODES[0];
+  const quizzes = getQuizzes();
+  wrap.innerHTML = `
+    <div style="padding:40px 0">
+      <div style="text-align:center;margin-bottom:30px">
+        <div style="font-size:3rem">${modeObj.emoji}</div>
+        <h1 style="font-size:2rem;font-weight:900;margin:8px 0 4px">${modeObj.name}</h1>
+        <p style="color:var(--muted)">${modeObj.desc}</p>
+      </div>
+      <h2 style="font-size:1.1rem;font-weight:900;margin-bottom:4px">Pick a Quiz</h2>
+      <div class="quiz-select-grid" id="qsGrid"></div>
+    </div>
+  `;
+  const grid = $('qsGrid');
+  if (!quizzes.length) {
+    grid.innerHTML = `<p style="color:var(--muted)">No quizzes found. <a href="editor.html" style="color:var(--accent2)">Create one!</a></p>`;
+    return;
+  }
+  quizzes.forEach(q => {
+    const c = document.createElement('div');
+    c.className = 'qs-card';
+    c.innerHTML = `
+      <div style="font-size:1.8rem;margin-bottom:8px">${q.emoji||'📚'}</div>
+      <h3>${q.title}</h3>
+      <p>${q.questions.length} questions</p>
+    `;
+    c.onclick = () => {
+      if (!q.questions.length) { alert('This quiz has no questions!'); return; }
+      quiz   = q;
+      quizId = q.id;
+      showLobby();
+    };
+    grid.appendChild(c);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOBBY
+// ═══════════════════════════════════════════════════════════════
+function showLobby() {
+  const modeObj = GAME_MODES.find(m=>m.id===mode) || GAME_MODES[0];
+  wrap.innerHTML = `
+    <div class="lobby">
+      <div style="font-size:4rem;margin-bottom:12px">${modeObj.emoji}</div>
+      <h1>${modeObj.name}</h1>
+      <p>${modeObj.desc}</p>
+      <div class="lobby-grid">
+        <div class="lobby-stat"><div class="val">${quiz.questions.length}</div><div class="lbl">Questions</div></div>
+        <div class="lobby-stat"><div class="val">${modeObj.name}</div><div class="lbl">Mode</div></div>
+        <div class="lobby-stat"><div class="val">${quiz.emoji||'📚'}</div><div class="lbl">${quiz.title}</div></div>
+        <div class="lobby-stat"><div class="val">👤</div><div class="lbl">${username}</div></div>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="startGame()" style="margin:10px 5px">▶ Start Game</button>
+      <button class="btn btn-secondary btn-lg" onclick="showQuizSelect()" style="margin:10px 5px">← Change Quiz</button>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════════════════════════
+function startGame() {
+  questions    = shuffle([...quiz.questions]);
+  qIndex       = 0;
+  score        = 0;
+  lives        = mode==='battle_royale' ? 3 : 999;
+  streak       = 0;
+  correct      = 0;
+  carProgress  = 0;
+  towerHP      = 10;
+  customers    = [];
+  cryptoCoins  = 0;
+  factoryUnits = 0;
+  gameActive   = true;
+  showQuestion();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUESTION
+// ═══════════════════════════════════════════════════════════════
+function showQuestion() {
+  if (qIndex >= questions.length) { endGame(); return; }
+  if (mode==='battle_royale' && lives<=0) { endGame(); return; }
+
+  answered = false;
+  const q  = questions[qIndex];
+  timerVal = q.timeLimit || 20;
+  clearInterval(timerInt);
+
+  wrap.innerHTML = buildHUD() + buildModeVisual() + `
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-progress-label">Question ${qIndex+1} / ${questions.length}</div>
+        <div class="progress-wrap" style="flex:1;max-width:300px">
+          <div class="progress-bar" style="width:${((qIndex)/questions.length)*100}%"></div>
+        </div>
+        <div class="timer-num" id="timerNum">${timerVal}</div>
+      </div>
+      <div class="q-text">${q.question}</div>
+      <div class="ans-grid" id="ansGrid">
+        ${q.answers.map((a,i)=>`<button class="ans-btn ans-${i}" onclick="answer(${i})">${a}</button>`).join('')}
+      </div>
+    </div>
+  `;
+
+  updateModeVisualDOM();
+  startTimer(q);
+}
+
+function startTimer(q) {
+  timerInt = setInterval(() => {
+    timerVal--;
+    const tn = $('timerNum');
+    if (tn) {
+      tn.textContent = timerVal;
+      if (timerVal<=5) tn.classList.add('urgent');
+    }
+    if (timerVal<=0) {
+      clearInterval(timerInt);
+      if (!answered) timeUp(q);
+    }
+  },1000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANSWER
+// ═══════════════════════════════════════════════════════════════
+function answer(idx) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInt);
+
+  const q        = questions[qIndex];
+  const isCorrect= idx === q.correct;
+  const timeBonus= Math.floor(timerVal / q.timeLimit * 50);
+
+  // mark buttons
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach((b,i) => {
+    b.classList.add('disabled');
+    if (i===q.correct) b.classList.add('correct');
+    else if (i===idx)  b.classList.add('wrong');
+  });
+
+  if (isCorrect) {
+    streak++;
+    correct++;
+    let pts = 100 + timeBonus + (streak>2 ? (streak-2)*20 : 0);
+
+    // mode bonuses
+    if (mode==='gold_hunt')     pts = Math.floor(pts * (1 + timerVal/q.timeLimit));
+    if (mode==='crypto')        { cryptoCoins+=pts; }
+    if (mode==='factory')       { factoryUnits+=Math.ceil(pts/30); }
+    if (mode==='cafe')          { if(customers.length<5) customers.push({patience:100}); }
+    if (mode==='racing')        { carProgress = Math.min(100, carProgress + Math.floor(100/questions.length) + (streak>1?5:0)); }
+    if (mode==='tower_defense') { /* enemies stopped */ }
+
+    score += pts;
+    showFeedback(true, `+${pts} ${streak>2?'🔥 x'+streak+' streak!':''}`);
+  } else {
+    streak = 0;
+    if (mode==='battle_royale') { lives = Math.max(0,lives-1); }
+    if (mode==='tower_defense') { towerHP = Math.max(0,towerHP-2); }
+    if (mode==='cafe')          { customers.shift(); }
+    showFeedback(false, `✗ Correct: "${q.answers[q.correct]}"`);
+  }
+}
+
+function timeUp(q) {
+  answered = true;
+  streak=0;
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach((b,i)=>{ b.classList.add('disabled'); if(i===q.correct) b.classList.add('correct'); });
+  if (mode==='battle_royale') lives=Math.max(0,lives-1);
+  if (mode==='tower_defense') towerHP=Math.max(0,towerHP-1);
+  showFeedback(false, `⏱ Time's up! Correct: "${q.answers[q.correct]}"`);
+}
+
+function showFeedback(ok, msg) {
+  const banner = document.createElement('div');
+  banner.className = `feedback-banner ${ok?'correct':'wrong'}`;
+  banner.textContent = ok ? `✅ Correct! ${msg}` : `❌ ${msg}`;
+  const card = document.querySelector('.q-card');
+  if (card) card.insertBefore(banner, card.firstChild);
+  updateModeVisualDOM();
+
+  // check battle royale death / tower fall
+  if (mode==='battle_royale' && lives<=0) {
+    setTimeout(()=>endGame(),1400);
+    return;
+  }
+  if (mode==='tower_defense' && towerHP<=0) {
+    setTimeout(()=>endGame(),1400);
+    return;
+  }
+
+  setTimeout(()=>{ qIndex++; showQuestion(); }, 1500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════════════
+function buildHUD() {
+  const hudItems = [
+    `<div class="hud-pill">💰 <span class="hv">${fmtNum(score)}</span></div>`,
+    `<div class="hud-pill">🔥 <span class="hv">${streak}</span> streak</div>`,
+  ];
+  if (mode==='battle_royale') hudItems.push(`<div class="hud-pill">❤️ <span class="hv">${lives}</span> lives</div>`);
+  if (mode==='racing')        hudItems.push(`<div class="hud-pill">🏎️ <span class="hv">${carProgress}%</span></div>`);
+  if (mode==='tower_defense') hudItems.push(`<div class="hud-pill">🏰 <span class="hv">${towerHP}</span> HP</div>`);
+  if (mode==='crypto')        hudItems.push(`<div class="hud-pill">💻 <span class="hv">${fmtNum(cryptoCoins)}</span> CR</div>`);
+  if (mode==='factory')       hudItems.push(`<div class="hud-pill">🏭 <span class="hv">${factoryUnits}</span> units</div>`);
+  if (mode==='cafe')          hudItems.push(`<div class="hud-pill">☕ <span class="hv">${customers.length}</span> served</div>`);
+  return `<div class="score-hud">${hudItems.join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODE VISUALS (HTML)
+// ═══════════════════════════════════════════════════════════════
+function buildModeVisual() {
+  switch(mode) {
+    case 'racing': return `
+      <div class="track" id="modeVisual">
+        <div class="track-label">🏁 Race Track — First to 100% wins!</div>
+        <div class="car-row">
+          <span style="font-size:.8rem;color:var(--muted);width:60px">YOU</span>
+          <div class="car-track" id="carTrack">
+            <span class="car-icon" id="carIcon" style="left:0%">🏎️</span>
+            <div class="finish-line"></div>
+          </div>
+        </div>
+      </div>`;
+
+    case 'tower_defense': return `
+      <div class="tower-area" id="modeVisual">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">🏰 TOWER HP</div>
+        <div class="tower-hp ${towerHP<=3?'low':''}" id="towerHP">${towerHP} ❤️</div>
+        <div class="progress-wrap mt-2"><div class="progress-bar" style="width:${towerHP*10}%;background:${towerHP<=3?'#ef4444':''};" id="towerBar"></div></div>
+        <div class="enemy-row" id="enemyRow">${buildEnemies()}</div>
+      </div>`;
+
+    case 'cafe': return `
+      <div class="cafe-area" id="modeVisual">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">☕ CUSTOMERS WAITING</div>
+        <div class="customer-row" id="customerRow">${buildCustomers()}</div>
+      </div>`;
+
+    case 'crypto': return `
+      <div class="crypto-area" id="modeVisual">
+        <div style="font-size:.7rem;color:#4ade80;margin-bottom:4px">// CRYPTO HACK TERMINAL</div>
+        <div class="crypto-log" id="cryptoLog">&gt; Initializing hack sequence...<br>&gt; Awaiting correct answers to breach firewall...<br></div>
+        <div class="crypto-balance" id="cryptoBal">₿ ${cryptoCoins} CR</div>
+      </div>`;
+
+    case 'factory': return `
+      <div class="factory-area" id="modeVisual">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">🏭 FACTORY OUTPUT</div>
+        <div class="factory-output" id="factoryOut">${factoryUnits} units</div>
+        <div class="conveyor" id="conveyor">📦📦📦📦📦</div>
+      </div>`;
+
+    case 'battle_royale': return `
+      <div class="lives-row" id="modeVisual">
+        ${Array.from({length:3},(_,i)=>`<span class="life-icon ${i>=lives?'lost':''}" id="life_${i}">❤️</span>`).join('')}
+      </div>`;
+
+    default: return '';
+  }
+}
+
+function buildEnemies() {
+  const n = Math.min(qIndex, 8);
+  return Array.from({length:n},()=>'👾').join(' ');
+}
+function buildCustomers() {
+  if (!customers.length) return '<span style="color:var(--muted);font-size:.85rem">No customers yet — answer correctly to serve them!</span>';
+  return customers.map((c,i)=>`
+    <div class="customer">
+      😊
+      <div class="patience-bar"><div class="patience-fill" style="width:${c.patience}%"></div></div>
+    </div>`).join('');
+}
+
+function updateModeVisualDOM() {
+  switch(mode) {
+    case 'racing': {
+      const ci = $('carIcon');
+      if (ci) ci.style.left = `calc(${carProgress}% - 20px)`;
+      break;
+    }
+    case 'tower_defense': {
+      const th  = $('towerHP');
+      const tb  = $('towerBar');
+      const er  = $('enemyRow');
+      if (th) { th.textContent=`${towerHP} ❤️`; th.className=`tower-hp ${towerHP<=3?'low':''}`; }
+      if (tb) { tb.style.width=`${towerHP*10}%`; tb.style.background=towerHP<=3?'#ef4444':''; }
+      if (er) er.innerHTML = buildEnemies();
+      break;
+    }
+    case 'cafe': {
+      const cr = $('customerRow');
+      if (cr) cr.innerHTML = buildCustomers();
+      break;
+    }
+    case 'crypto': {
+      const log = $('cryptoLog');
+      const bal = $('cryptoBal');
+      if (log) {
+        const msgs = answered
+          ? (questions[qIndex] && document.querySelector('.feedback-banner.correct')
+            ? `&gt; <span style="color:#4ade80">SUCCESS: Server breached! +${Math.floor(100)} CR earned</span><br>`
+            : `&gt; <span style="color:#ef4444">FAIL: Firewall blocked. No coins earned.</span><br>`)
+          : '';
+        log.innerHTML += msgs;
+        log.scrollTop = log.scrollHeight;
+      }
+      if (bal) bal.textContent = `₿ ${fmtNum(cryptoCoins)} CR`;
+      break;
+    }
+    case 'factory': {
+      const fo = $('factoryOut');
+      const cv = $('conveyor');
+      if (fo) fo.textContent = `${factoryUnits} units`;
+      if (cv) cv.innerHTML = Array.from({length:Math.min(factoryUnits,8)},()=>'📦').join('') || '⚙️ Idle';
+      break;
+    }
+    case 'battle_royale': {
+      for(let i=0;i<3;i++){
+        const li=$(`life_${i}`);
+        if(li) li.className=`life-icon ${i>=lives?'lost':''}`;
+      }
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// END
+// ═══════════════════════════════════════════════════════════════
+function endGame() {
+  gameActive = false;
+  clearInterval(timerInt);
+
+  const pct    = questions.length ? Math.round((correct/questions.length)*100) : 0;
+  const grade  = pct>=90?'🏆 S':pct>=75?'⭐ A':pct>=60?'👍 B':pct>=40?'😅 C':'💀 F';
+  const modeObj= GAME_MODES.find(m=>m.id===mode)||GAME_MODES[0];
+
+  // death reason
+  let reason = '';
+  if (mode==='battle_royale' && lives<=0) reason = '<p style="color:var(--red);font-weight:800;margin-bottom:12px">💀 You ran out of lives!</p>';
+  if (mode==='tower_defense' && towerHP<=0) reason = '<p style="color:var(--red);font-weight:800;margin-bottom:12px">🏰 Your tower was destroyed!</p>';
+  if (mode==='racing' && carProgress>=100) reason = '<p style="color:var(--green);font-weight:800;margin-bottom:12px">🏁 You crossed the finish line!</p>';
+
+  wrap.innerHTML = `
+    <div class="result">
+      <div class="trophy">${grade.split(' ')[0]}</div>
+      <h1>Game Over!</h1>
+      <p style="color:var(--muted);margin-top:6px">${modeObj.emoji} ${modeObj.name} · ${quiz.title}</p>
+      ${reason}
+      <div class="final-score">${fmtNum(score)}</div>
+      <p style="color:var(--muted);margin-bottom:20px">Total Score</p>
+      <div class="result-stats">
+        <div class="result-stat"><div class="rv">${correct}/${questions.length}</div><div class="rl">Correct</div></div>
+        <div class="result-stat"><div class="rv">${pct}%</div><div class="rl">Accuracy</div></div>
+        <div class="result-stat"><div class="rv">${grade}</div><div class="rl">Grade</div></div>
+        ${mode==='racing'?`<div class="result-stat"><div class="rv">${carProgress}%</div><div class="rl">Distance</div></div>`:''}
+        ${mode==='tower_defense'?`<div class="result-stat"><div class="rv">${towerHP}</div><div class="rl">HP Left</div></div>`:''}
+        ${mode==='crypto'?`<div class="result-stat"><div class="rv">${fmtNum(cryptoCoins)}</div><div class="rl">Crypto</div></div>`:''}
+        ${mode==='factory'?`<div class="result-stat"><div class="rv">${factoryUnits}</div><div class="rl">Units Made</div></div>`:''}
+        ${mode==='cafe'?`<div class="result-stat"><div class="rv">${customers.length}</div><div class="rl">Served</div></div>`:''}
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" onclick="startGame()">↺ Play Again</button>
+        <button class="btn btn-secondary btn-lg" onclick="showLobby()">← Lobby</button>
+        <a href="index.html" class="btn btn-secondary btn-lg">🏠 Home</a>
+      </div>
+    </div>
+  `;
+}
+
+function exitGame() {
+  clearInterval(timerInt);
+  if (gameActive && !confirm('Exit the game? Your progress will be lost.')) return;
+  window.location.href = 'index.html';
+}
+
+boot();
+</script>
+</body>
+</html>
